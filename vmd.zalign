@@ -1,0 +1,72 @@
+package require pbctools
+#align target
+mol new step2_orient.pdb waitfor all
+#input DCD
+mol new step5_assembly.psf  waitfor all
+mol addfile  slc.stride20.dcd  waitfor all
+
+#TM selection in target
+set reference_tm [atomselect 0 "name CA and resid 36 to 67 76 to 98 127 to 141 149 to 159 179 to 190 193 to 204 215 to 232 252 to 277 288 to 307 330 to 350 357 to 375 386 to 402 405 to 416 422 to 438" frame 0]
+
+set movedis {}
+set center [measure center $reference_tm]
+foreach a $center {
+    lappend movedis [ expr -1 * $a]
+}
+$reference_tm moveby $movedis
+
+set refx [ $reference_tm get x ]
+set refy [ $reference_tm get y ]
+
+#TM selection in input DCD
+set compare_tm [atomselect 1 "name CA and resid 36 to 67 76 to 98 127 to 141 149 to 159 179 to 190 193 to 204 215 to 232 252 to 277 288 to 307 330 to 350 357 to 375 386 to 402 405 to 416 422 to 438"]
+set compare_all [atomselect 1 "all"]
+
+set num_steps [molinfo 1 get numframes]
+for {set frame 0} {$frame < $num_steps} {incr frame} {
+        $compare_tm frame $frame
+        $compare_all frame $frame
+        set movedis {}
+        set center [measure center $compare_tm]
+        foreach a $center {
+            lappend movedis [ expr -1 * $a]
+        }
+        $compare_all moveby $movedis
+        
+        set compx [ $compare_tm get x ]
+        set compy [ $compare_tm get y ]
+        
+        set a1 [ vecsum [ vecmul $refy $compx] ]
+        set temp [ vecsum  [ vecmul $refx $compy] ]
+        set a1 [expr $a1 - $temp ]
+
+        set a2 [ vecsum  [ vecmul $refx $compx] ] 
+        set temp [ vecsum [ vecmul $refy $compy] ]
+        set a2 [expr $a2 + $temp ]
+        
+        set ang1 [ expr atan( [ expr $a1 / $a2 ] ) ]
+        set ang2 [ expr $ang1 + 3.1415926 ]
+
+        set direc1 [ expr $a2*cos($ang1) + $a1*sin($ang1) ]
+        set direc2 [ expr $a2*cos($ang2) + $a1*sin($ang2) ]
+
+        if {$direc1 > 0} {
+            set ang $ang1
+        } else {
+            set ang $ang2
+        }
+
+        # compute the transformation
+        set trans_mat [ transaxis z $ang rad ]
+        $compare_all move $trans_mat
+        set rmsd [measure rmsd $compare_tm $reference_tm]
+        set ang [ expr $ang / 3.1415926 * 180]
+        puts "RMSD of $frame is $rmsd, rotate ang is $ang"
+
+}
+
+#pbc wrap -centersel "segid PROA" -center com -compound res -all
+animate write dcd zalign.dcd
+
+exit
+
