@@ -1,12 +1,12 @@
 
-#align target
+#align reference
 mol new step2_orient.pdb waitfor all
 #input DCD
 mol new step5_assembly.psf  waitfor all
 mol addfile  slc.stride20.dcd  waitfor all
 
-#TM selection in target
-set reference_tm [atomselect 0 "name CA and resid 36 to 67 76 to 98 127 to 141 149 to 159 179 to 190 193 to 204 215 to 232 252 to 277 288 to 307 330 to 350 357 to 375 386 to 402 405 to 416 422 to 438" frame 0]
+#TM selection in reference
+set reference_tm [atomselect 0 "name CA and resid 36 to 438" frame 0]
 
 set movedis {}
 set center [measure center $reference_tm]
@@ -19,7 +19,7 @@ set refx [ $reference_tm get x ]
 set refy [ $reference_tm get y ]
 
 #TM selection in input DCD
-set compare_tm [atomselect 1 "name CA and resid 36 to 67 76 to 98 127 to 141 149 to 159 179 to 190 193 to 204 215 to 232 252 to 277 288 to 307 330 to 350 357 to 375 386 to 402 405 to 416 422 to 438"]
+set compare_tm [atomselect 1 "name CA and resid 36 to 438"]
 set compare_all [atomselect 1 "all"]
 
 set num_steps [molinfo 1 get numframes]
